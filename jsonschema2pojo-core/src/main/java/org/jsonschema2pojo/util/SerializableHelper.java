@@ -30,6 +30,11 @@ import java.util.List;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import java.io.PrintWriter;
+import java.io.FileWriter;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.jsonschema2pojo.exception.GenerationException;
 
 import com.sun.codemodel.JClass;
@@ -43,6 +48,8 @@ import com.sun.codemodel.JTypeVar;
 import com.sun.codemodel.JVar;
 
 public class SerializableHelper {
+    private static HashMap<String, Integer> counters = new HashMap<>();
+
     private static final Comparator<JClass> INTERFACE_COMPARATOR =
             new Comparator<JClass>() {
         @Override
@@ -75,22 +82,41 @@ public class SerializableHelper {
     private static void processMethodCollectionForSerializableSupport(Iterator<JMethod> methods, DataOutputStream dataOutputStream) throws IOException {
         TreeMap<String, JMethod> sortedMethods = new TreeMap<>();
         while (methods.hasNext()) {
+            counters.put("while1-true", counters.getOrDefault("while1-true", 0));
             JMethod method = methods.next();
             //Collect non-private methods
             if ((method.mods().getValue() & JMod.PRIVATE) != JMod.PRIVATE) {
+                counters.put("if1-true", counters.getOrDefault("if1-true", 0));
                 sortedMethods.put(method.name(), method);
             }
         }
         for (JMethod method : sortedMethods.values()) {
+            counters.put("for1-true", counters.getOrDefault("for1-true", 0));
             dataOutputStream.writeUTF(method.name());
             dataOutputStream.writeInt(method.mods().getValue());
             if (method.type() != null) {
+                counters.put("if2-true", counters.getOrDefault("if2-true", 0));
                 dataOutputStream.writeUTF(method.type().fullName());
             }
             for (JVar param : method.params()) {
+                counters.put("for2-true", counters.getOrDefault("for2-true", 0));
                 dataOutputStream.writeUTF(param.type().fullName());
             }
         }
+
+        writeCoverage();
+    }
+
+    private static void writeCoverage() {
+      try {
+        PrintWriter writer = new PrintWriter(new FileWriter("ad-hoc2.log", true));
+        for (Map.Entry<String, Integer> c : counters.entrySet()) {
+          writer.printf("%s: %d\n", c.getKey(), c.getValue());
+        }
+        writer.close();
+      } catch (IOException e) {
+        System.err.println(e);
+      }
     }
 
     private static void processDefinedClassForSerializableSupport(JDefinedClass jclass, DataOutputStream dataOutputStream) throws IOException {
