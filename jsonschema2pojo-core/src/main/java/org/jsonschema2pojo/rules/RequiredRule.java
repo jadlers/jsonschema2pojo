@@ -18,6 +18,8 @@ package org.jsonschema2pojo.rules;
 
 import java.io.PrintWriter;
 import java.io.FileWriter;
+import java.util.HashMap;
+import java.util.Map;
 
 import java.io.IOException;
 
@@ -41,7 +43,7 @@ public class RequiredRule implements Rule<JDocCommentable, JDocCommentable> {
 
     private final RuleFactory ruleFactory;
 
-    private static int[] counters = new int[5];
+    private static HashMap<String, Integer> counters = new HashMap<>();
 
     protected RequiredRule(RuleFactory ruleFactory) {
         this.ruleFactory = ruleFactory;
@@ -71,25 +73,25 @@ public class RequiredRule implements Rule<JDocCommentable, JDocCommentable> {
     public JDocCommentable apply(String nodeName, JsonNode node, JsonNode parent, JDocCommentable generatableType, Schema schema) {
 
         if (node.asBoolean()) {
-          counters[0]++; // If1-true
+          counters.put("if1-true", counters.getOrDefault("if1-true", 0) + 1);
             generatableType.javadoc().append("\n(Required)");
 
             if (ruleFactory.getGenerationConfig().isIncludeJsr303Annotations()
                     && generatableType instanceof JFieldVar) {
-              counters[1]++; // If2-true
+              counters.put("if2-true", counters.getOrDefault("if2-true", 0) + 1);
                 ((JFieldVar) generatableType).annotate(NotNull.class);
             }
 
             if (ruleFactory.getGenerationConfig().isIncludeJsr305Annotations()
                     && generatableType instanceof JFieldVar) {
-              counters[2]++; // If3-true
+              counters.put("if3-true", counters.getOrDefault("if3-true", 0) + 1);
                 ((JFieldVar) generatableType).annotate(Nonnull.class);
             }
         } else {
-          counters[3]++; // If1-else
+          counters.put("if1-else", counters.getOrDefault("if1-else", 0) + 1);
             if (ruleFactory.getGenerationConfig().isIncludeJsr305Annotations()
                     && generatableType instanceof JFieldVar) {
-              counters[4]++; // If4-true
+              counters.put("if4-true", counters.getOrDefault("if4-true", 0) + 1);
                 ((JFieldVar) generatableType).annotate(Nullable.class);
             }
         }
@@ -102,11 +104,9 @@ public class RequiredRule implements Rule<JDocCommentable, JDocCommentable> {
     private void writeCoverage() {
         try {
             PrintWriter writer = new PrintWriter(new FileWriter("ad-hoc.log"));
-            writer.printf("If1-true: %d\n", counters[0]);
-            writer.printf("If2-true: %d\n", counters[1]);
-            writer.printf("If3-true: %d\n", counters[2]);
-            writer.printf("If1-else: %d\n", counters[3]);
-            writer.printf("If4-true: %d\n", counters[4]);
+            for (Map.Entry<String, Integer> c : counters.entrySet()) {
+              writer.printf("%s: %d\n", c.getKey(), c.getValue());
+            }
             writer.close();
         } catch (IOException e) {
             System.err.println(e);
