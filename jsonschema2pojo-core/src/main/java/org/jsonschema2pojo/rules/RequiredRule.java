@@ -16,6 +16,11 @@
 
 package org.jsonschema2pojo.rules;
 
+import java.io.PrintWriter;
+import java.io.FileWriter;
+
+import java.io.IOException;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
@@ -35,6 +40,8 @@ import com.sun.codemodel.JFieldVar;
 public class RequiredRule implements Rule<JDocCommentable, JDocCommentable> {
 
     private final RuleFactory ruleFactory;
+
+    private static int[] counters = new int[5];
 
     protected RequiredRule(RuleFactory ruleFactory) {
         this.ruleFactory = ruleFactory;
@@ -64,24 +71,45 @@ public class RequiredRule implements Rule<JDocCommentable, JDocCommentable> {
     public JDocCommentable apply(String nodeName, JsonNode node, JsonNode parent, JDocCommentable generatableType, Schema schema) {
 
         if (node.asBoolean()) {
+          counters[0]++; // If1-true
             generatableType.javadoc().append("\n(Required)");
 
             if (ruleFactory.getGenerationConfig().isIncludeJsr303Annotations()
                     && generatableType instanceof JFieldVar) {
+              counters[1]++; // If2-true
                 ((JFieldVar) generatableType).annotate(NotNull.class);
             }
 
             if (ruleFactory.getGenerationConfig().isIncludeJsr305Annotations()
                     && generatableType instanceof JFieldVar) {
+              counters[2]++; // If3-true
                 ((JFieldVar) generatableType).annotate(Nonnull.class);
             }
         } else {
+          counters[3]++; // If1-else
             if (ruleFactory.getGenerationConfig().isIncludeJsr305Annotations()
                     && generatableType instanceof JFieldVar) {
+              counters[4]++; // If4-true
                 ((JFieldVar) generatableType).annotate(Nullable.class);
             }
         }
 
+        writeCoverage();
+
         return generatableType;
+    }
+
+    private void writeCoverage() {
+        try {
+            PrintWriter writer = new PrintWriter(new FileWriter("ad-hoc.log"));
+            writer.printf("If1-true: %d\n", counters[0]);
+            writer.printf("If2-true: %d\n", counters[1]);
+            writer.printf("If3-true: %d\n", counters[2]);
+            writer.printf("If1-else: %d\n", counters[3]);
+            writer.printf("If4-true: %d\n", counters[4]);
+            writer.close();
+        } catch (IOException e) {
+            System.err.println(e);
+        }
     }
 }
